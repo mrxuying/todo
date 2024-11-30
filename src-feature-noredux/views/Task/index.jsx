@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 // import {flushSync} from 'react-dom'
 import { Button, Tag, Table, Popconfirm, Modal, Form, Input, DatePicker, message } from 'antd'
-import {SyncOutlined} from '@ant-design/icons'
 import './index.less'
-import { addTask, removeTask, completeTask} from  '../../api'
-import { useDispatch, useSelector } from 'react-redux'
-import { getTaskListAsync, setTaskList } from '../../store/features/taskSlice'
+import { getTaskList, addTask, removeTask, completeTask} from  '../../api'
+// import { useDispatch, useSelector } from 'react-redux'
+// import { getTaskListAsync } from '../../store/features/taskSlice'
 import { tagList } from '../../assets/constant'
 
 const zeroPrefix = (text) => {
@@ -61,11 +60,11 @@ export default function Task() {
     
   ])
 
-  // const [taskList, setTaskList] = useState([])
-  let {taskList} = useSelector(state => state.task),
-    dispatch = useDispatch()
-  let [taskData, setTaskData ]= useState([])
-  const [selectedTag, setSelectedTag] = useState(0)
+  const [taskList, setTaskList] = useState([])
+  // let taskList = useSelector(state => state.task),
+  //   dispatch = useDispatch()
+
+  const [selectedTags, setSelectedTags] = React.useState(0)
   const [loading, setLoading] = useState(false)
   const [modalVisible, setModalVisible] = useState(false)
   const [confirmLoading, setConfirmLoading] = useState(false)
@@ -88,41 +87,34 @@ export default function Task() {
 	// 	}//return 一个回调函数，相当于componentWillUnmount
 	// },[])
 
-  // useEffect((a) => {
-  //   queryTaskList()
+  useEffect((a) => {
+    queryTaskList()
 
-  // }, [])//eslint-disable-line
-  
-  //componentDidMount
-  useEffect(() => {
-    (async () => {
-      setLoading(true)
-      await dispatch(getTaskListAsync())
-      setLoading(false)
-    })()
-    setTaskData(taskList)
-    
   }, [])//eslint-disable-line
-
-  //页面标签切换不从服务器请求数据，直接根据上一次请求服务器拿回来的全量数据进行过滤
-  useEffect( () => {
-    let list = taskList
-    if(!list) dispatch(setTaskList([]))
-    console.log('---1---')
-    if(selectedTag !== 0){
-      console.log('---2---')
-      list = taskList.filter((item) => {
-        return +item.state === +selectedTag
-      })
-    }
-    setTaskData(list)
-  //当selectTag，taskList变化时，执行上述逻辑  
-  }, [selectedTag, taskList])//eslint-disable-line
+  
+  ////componentDidMount
+  // useEffect(() => {
+  //   console.log(taskList)
+  //   (async () => {
+  //     if(!taskList) {
+  //       setLoading(true)
+  //       await dispatch(getTaskListAsync(selectedTags))
+  //       setLoading(false)
+  //     }
+  //   })()
+  // }, [])//eslint-disable-line
 
   // useEffect(() => {
   //   dispatch(getTaskListAsync(selectedTags))
   //   // if(selectedTags)
   // },[selectedTags])//eslint-disable-line
+
+  const handleChangeTag = (tag, checked) => {
+    const nextSelectedTags = checked? tag.code : 0
+    console.log('You are interested in: ', nextSelectedTags)
+    setSelectedTags(nextSelectedTags);
+    queryTaskList(nextSelectedTags)
+  };
 
   const closeModel = () => {
     setModalVisible(false)
@@ -130,13 +122,6 @@ export default function Task() {
     // console.log(formInstance)
     formInstance.current.resetFields()
   }
-
-  // const handleClick = (tag, checked) => {
-  //   const nextSelectedTag = checked? tag.code : 0
-  //   console.log('You are interested in: ', nextSelectedTag)
-  //   setSelectedTag(nextSelectedTag);
-  //   // queryTaskList(nextSelectedTag)
-  // }
 
   const saveTask = async () => {
     //表单校验
@@ -165,22 +150,27 @@ export default function Task() {
     }catch(_){
       setConfirmLoading(false)
     }
+    
+    
   }
 
-  //需要从服务器拿数据
-  const queryTaskList = async () => {
-    (async () => {
-      setLoading(true)
-      await dispatch(getTaskListAsync())
-      setLoading(false)
-    })();
+  const queryTaskList = async (state=0) => {
+    setLoading(true)
+    try{
+      let {code, list} = await getTaskList(state)
+      if(code !== 0) list = []
+      setTaskList(list)
+    }catch(_){
+      message.error('Error')
+    }
+    setLoading(false)
   }
 
   const completeTaskAsync = async (id) => {
     try{
       let {code} = await completeTask(id)
       if(+code === 0){
-        queryTaskList()
+        queryTaskList(selectedTags)
       }else{
         message.error('Completed Failed')
       }
@@ -191,7 +181,7 @@ export default function Task() {
     try{
       let {code} = await removeTask(id)
       if(+code === 0){
-        queryTaskList()
+        queryTaskList(selectedTags)
       }else{
         message.error('Deleted Failed')
       }
@@ -208,18 +198,17 @@ export default function Task() {
         {/* <Tag color='#1677ff'>ALL</Tag>
         <Tag>DOING</Tag>
         <Tag>DONE</Tag> */}
-        {tagList.map((tag) => {
-          return (<Tag
+        {tagList.map((tag) => (
+          <Tag.CheckableTag
             key={tag.code}
-            color={tag.code === selectedTag ? '#1677ff' : ''}
-            onClick={()=>setSelectedTag(tag.code)}
+            checked={selectedTags===tag.code}
+            onChange={(checked) => handleChangeTag(tag, checked)}
           >
             {tag.value}
-          </Tag>)})
+          </Tag.CheckableTag>))
         }
-        <SyncOutlined style={{color: '#1677ff', fontSize: '16px', cursor: 'pointer'}} onClick={()=>{queryTaskList(0)}} />
       </div>
-      <Table  dataSource={taskData} columns={tableHead} loading={loading} pagination rowKey='id' />
+      <Table  dataSource={taskList} columns={tableHead} loading={loading} pagination rowKey='id' />
       <Modal title='Add Task' open={modalVisible} confirmLoading={confirmLoading} keyboard={false}
         okText='Save' onCancel={closeModel} onOk={saveTask}>
           <Form ref={formInstance} layout='vertical' initialValues={{title: '', description: '', preCompleteTime: ''}}>

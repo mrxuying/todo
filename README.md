@@ -9,4 +9,5 @@
   yarn add @reduxjs/toolkit -g
   yarn add redux-logger redux-thunk -g
   yarn add react-redux -g
+  yarn add @ant-design/icons
 ```

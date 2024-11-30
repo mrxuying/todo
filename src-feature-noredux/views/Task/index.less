@@ -1,0 +1,39 @@
+.task-box {
+
+  box-sizing: border-box;
+  margin: 0 auto;
+  width: 1200px;
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px; //下方内边距
+    border-bottom: 1px solid #ddd;
+
+    .title {
+      font-size: 20px;
+      line-height: 50px;  //行标签高度
+    }
+  }
+
+  .tag-box {
+    margin: 15px 0; //上下15px,左右0，靠左
+
+    .ant-tag {
+      border-radius: 10px;  //圆角
+      margin-inline-end: 20px;  //调整横向间距
+      padding-inline: 16px; //横向内间距
+      font-size: 16px;
+      line-height: 30px;  //高度
+      cursor: pointer; //让标签能够点击
+
+    }
+  }
+
+  .ant-table-cell {
+    .ant-btn-link {
+      padding: 4px;
+    }
+  }
+}
